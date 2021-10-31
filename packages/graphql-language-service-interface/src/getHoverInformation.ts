@@ -44,6 +44,8 @@ export function getHoverInformation(
   const typeInfo = getTypeInfo(schema, token.state);
   const options = { schema };
 
+  let result = '';
+
   // Given a Schema and a Token, produce the contents of an info tooltip.
   // To do this, create a div element that we will render "into" and then pass
   // it to various rendering functions.
@@ -54,17 +56,17 @@ export function getHoverInformation(
     const into: string[] = [];
     renderField(into, typeInfo, options);
     renderDescription(into, options, typeInfo.fieldDef);
-    return into.join('').trim();
+    result = into.join('').trim();
   } else if (kind === 'Directive' && step === 1 && typeInfo.directiveDef) {
     const into: string[] = [];
     renderDirective(into, typeInfo, options);
     renderDescription(into, options, typeInfo.directiveDef);
-    return into.join('').trim();
+    result = into.join('').trim();
   } else if (kind === 'Argument' && step === 0 && typeInfo.argDef) {
     const into: string[] = [];
     renderArg(into, typeInfo, options);
     renderDescription(into, options, typeInfo.argDef);
-    return into.join('').trim();
+    result = into.join('').trim();
   } else if (
     kind === 'EnumValue' &&
     typeInfo.enumValue &&
@@ -73,7 +75,7 @@ export function getHoverInformation(
     const into: string[] = [];
     renderEnumValue(into, typeInfo, options);
     renderDescription(into, options, typeInfo.enumValue);
-    return into.join('').trim();
+    result = into.join('').trim();
   } else if (
     kind === 'NamedType' &&
     typeInfo.type &&
@@ -82,9 +84,9 @@ export function getHoverInformation(
     const into: string[] = [];
     renderType(into, typeInfo, options, typeInfo.type);
     renderDescription(into, options, typeInfo.type);
-    return into.join('').trim();
+    result = into.join('').trim();
   }
-  return '';
+  return result;
 }
 
 function renderField(into: string[], typeInfo: AllTypeInfo, options: any) {

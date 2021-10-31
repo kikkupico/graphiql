@@ -12,10 +12,7 @@ import * as monaco from 'monaco-editor';
 
 import { getRange, LanguageService } from 'graphql-language-service';
 
-import type {
-  SchemaResponse,
-  CompletionItem as GraphQLCompletionItem,
-} from 'graphql-language-service';
+import type { CompletionItem as GraphQLCompletionItem } from 'graphql-language-service';
 
 import {
   toGraphQLPosition,
@@ -24,7 +21,7 @@ import {
   toCompletion,
 } from './utils';
 
-import type { GraphQLSchema, DocumentNode } from 'graphql';
+import type { DocumentNode } from 'graphql';
 
 export type MonacoCompletionItem = monaco.languages.CompletionItem & {
   isDeprecated?: boolean;
@@ -39,18 +36,6 @@ export class GraphQLWorker {
     this._ctx = ctx;
     this._languageService = new LanguageService(createData.languageConfig);
     this._formattingOptions = createData.formattingOptions;
-  }
-
-  async getSchemaResponse(_uri?: string): Promise<SchemaResponse | null> {
-    return this._languageService.getSchemaResponse();
-  }
-
-  async setSchema(schema: string): Promise<void> {
-    await this._languageService.setSchema(schema);
-  }
-
-  async loadSchema(_uri?: string): Promise<GraphQLSchema | null> {
-    return this._languageService.getSchema();
   }
 
   async doValidation(uri: string): Promise<editor.IMarkerData[]> {
