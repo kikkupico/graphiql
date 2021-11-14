@@ -61,7 +61,6 @@ export function setupMode(defaults: MonacoGraphQLAPI): IDisposable {
   }
 
   function registerAllProviders(api: MonacoGraphQLAPI): void {
-    console.log('registering');
     const { modeConfiguration } = api;
     disposeAll(providers);
 

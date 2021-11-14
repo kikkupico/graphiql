@@ -60,12 +60,10 @@ async function render(monacoGraphQLAPI: MonacoGraphQLAPI) {
    */
 
   monacoGraphQLAPI.onSchemaLoaded(() => {
-    console.log('schema loaded');
     setSchemaStatus('Schema Loaded.');
   });
 
   monacoGraphQLAPI.onSchemaConfigChange(() => {
-    console.log('schema config changed');
     setSchemaStatus('Schema Loading....');
   });
 
@@ -296,7 +294,7 @@ export function renderGithubLoginButton(api: MonacoGraphQLAPI) {
 
   githubButton.onclick = e => {
     e.preventDefault();
-    // @ts-ignore
+    // @ts-expect-error
     const authenticator = new netlify.default({ site_id: SITE_ID });
     authenticator.authenticate(
       { provider: 'github', scope: ['user', 'read:org'] },

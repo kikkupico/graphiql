@@ -20,8 +20,6 @@ import type {
   ModeConfiguration,
   MonacoGraphQLSchemaConfig,
 } from './typings';
-// import type { WorkerAccessor } from './languageFeatures';
-// import { GraphQLWorker } from './GraphQLWorker';
 
 export type MonacoGraphQLAPIOptions = {
   languageId: string;
@@ -46,9 +44,6 @@ export class MonacoGraphQLAPI {
   private _formattingOptions!: FormattingOptions;
   private _modeConfiguration!: ModeConfiguration;
   private _languageId: string;
-
-  // private _workerPromise: Promise<WorkerAccessor>;
-  // private _resolveWorkerPromise: (value: WorkerAccessor) => void = () => {};
   private _documentString: string | null = null;
   private _externalFragmentDefinitions:
     | string
@@ -142,7 +137,7 @@ export class MonacoGraphQLAPI {
         return schemaEntry;
       }
     } catch (err) {
-      console.log('error fetching schema\n', err);
+      console.error('error fetching schema\n', err);
     }
     return null;
   }
@@ -185,7 +180,6 @@ export class MonacoGraphQLAPI {
       this.schemaConfig.uri || 'default',
     );
     if (cachedSchema) {
-      console.log('cached schema');
       const ls = new LanguageService(this.getSchemaConfig());
       this._langService = ls;
 

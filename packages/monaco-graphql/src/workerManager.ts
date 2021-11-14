@@ -35,8 +35,8 @@ export class WorkerManager {
     this._configChangeListener = this._defaults.onDidChange(() =>
       this._stopWorker(),
     );
+    // TODO: I think this is causing some minor issues
     this._schemaConfigChangeListener = this._defaults.onSchemaLoaded(() => {
-      console.log('worker knows to stop');
       this._stopWorker();
     });
     this._client = null;
