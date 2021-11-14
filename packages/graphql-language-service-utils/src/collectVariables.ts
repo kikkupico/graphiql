@@ -5,7 +5,6 @@ import {
   NamedTypeNode,
   GraphQLInputType,
   Kind,
-  GraphQLFloat,
 } from 'graphql';
 
 export type VariableToType = {
@@ -13,7 +12,8 @@ export type VariableToType = {
 };
 
 /**
- * Collects all variables in a document of operations
+ * Generates a map of GraphQLInputTypes for
+ * all the variables in an AST document of operations
  *
  * @param schema
  * @param documentAST
@@ -24,6 +24,7 @@ export function collectVariables(
   documentAST: DocumentNode,
 ): VariableToType {
   const variableToType: VariableToType = Object.create(null);
+  // it would be more ideal to use visitWithTypeInfo here but it's very simple
   documentAST.definitions.forEach(definition => {
     if (definition.kind === 'OperationDefinition') {
       const variableDefinitions = definition.variableDefinitions;
@@ -37,9 +38,9 @@ export function collectVariables(
             variableToType[variable.name.value] = inputType;
           } else if (type.kind === Kind.NAMED_TYPE) {
             // in the experimental stream defer branch we are using, it seems typeFromAST() doesn't recognize Floats?
-            if (type.name.value === 'Float') {
-              variableToType[variable.name.value] = GraphQLFloat;
-            }
+            // if (type.name.value === 'Float') {
+            //   variableToType[variable.name.value] = GraphQLFloat;
+            // }
           }
         });
       }

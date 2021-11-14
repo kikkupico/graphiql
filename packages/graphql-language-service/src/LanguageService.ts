@@ -11,6 +11,8 @@ import {
   ValidationRule,
   FragmentDefinitionNode,
   visit,
+  // introspectionFromSchema,
+  IntrospectionQuery,
 } from 'graphql';
 import type { IPosition } from 'graphql-language-service-types';
 import {
@@ -19,17 +21,15 @@ import {
   getHoverInformation,
 } from 'graphql-language-service-interface';
 import {
-  defaultSchemaLoader,
-  SchemaConfig,
-  SchemaResponse,
-  defaultSchemaBuilder,
-} from './schemaLoader';
+  getVariablesJSONSchema,
+  getOperationASTFacts,
+} from 'graphql-language-service-utils';
+import { defaultSchemaLoader, SchemaConfig } from './schemaLoader';
 
 export type GraphQLLanguageConfig = {
   parser?: typeof parse;
+  jsonParser?: typeof JSON.parse;
   schemaLoader?: typeof defaultSchemaLoader;
-  schemaBuilder?: typeof defaultSchemaBuilder;
-  schemaString?: string;
   parseOptions?: ParseOptions;
   schemaConfig: SchemaConfig;
   exteralFragmentDefinitions?: FragmentDefinitionNode[] | string;
@@ -37,14 +37,9 @@ export type GraphQLLanguageConfig = {
 
 export class LanguageService {
   private _parser: typeof parse = parse;
-  private _schema: GraphQLSchema | null = null;
+  // private _jsonParser: typeof JSON.parse;
   private _schemaConfig: SchemaConfig;
-  private _schemaResponse: SchemaResponse | null = null;
-  private _schemaLoader: (
-    schemaConfig: SchemaConfig,
-  ) => Promise<SchemaResponse | null> = defaultSchemaLoader;
-  private _schemaBuilder = defaultSchemaBuilder;
-  private _schemaString: string | null = null;
+  private _schemaLoader: typeof defaultSchemaLoader = defaultSchemaLoader;
   private _parseOptions: ParseOptions | undefined = undefined;
   private _exteralFragmentDefinitionNodes:
     | FragmentDefinitionNode[]
@@ -52,10 +47,9 @@ export class LanguageService {
   private _exteralFragmentDefinitionsString: string | null = null;
   constructor({
     parser,
+    // jsonParser,
     schemaLoader,
-    schemaBuilder,
     schemaConfig,
-    schemaString,
     parseOptions,
     exteralFragmentDefinitions,
   }: GraphQLLanguageConfig) {
@@ -63,15 +57,13 @@ export class LanguageService {
     if (parser) {
       this._parser = parser;
     }
+    // if(jsonParser) {
+    //   this._jsonParser = jsonParser
+    // }
     if (schemaLoader) {
       this._schemaLoader = schemaLoader;
     }
-    if (schemaBuilder) {
-      this._schemaBuilder = schemaBuilder;
-    }
-    if (schemaString) {
-      this._schemaString = schemaString;
-    }
+
     if (parseOptions) {
       this._parseOptions = parseOptions;
     }
@@ -85,7 +77,15 @@ export class LanguageService {
   }
 
   public get schema() {
-    return this._schema as GraphQLSchema;
+    return this._schemaConfig.schema;
+  }
+
+  public get schemaConfig() {
+    return this._schemaConfig;
+  }
+
+  public get introspectionJSON(): IntrospectionQuery {
+    return this._schemaConfig.introspectionJSON!;
   }
 
   public async getSchema() {
@@ -124,44 +124,33 @@ export class LanguageService {
    * setSchema statically, ignoring URI
    * @param schema {schemaString}
    */
-  public async setSchema(schema: string): Promise<void> {
-    this._schemaString = schema;
+  public async setSchema(schema: GraphQLSchema): Promise<void> {
+    this._schemaConfig.schema = schema;
     await this.loadSchema();
   }
 
-  public async getSchemaResponse(): Promise<SchemaResponse | null> {
-    if (this._schemaResponse) {
-      return this._schemaResponse;
+  public async loadSchema(): Promise<GraphQLSchema | null> {
+    const result = await this._schemaLoader(this._schemaConfig, this.parse);
+    if (result?.schema) {
+      this._schemaConfig.schema = result.schema;
+      if (result.introspectionJSON && !result.introspectionJSONString) {
+        this._schemaConfig.introspectionJSON = result.introspectionJSON;
+        this._schemaConfig.introspectionJSONString = JSON.stringify(
+          result.introspectionJSONString,
+        );
+      } else if (result.introspectionJSONString) {
+        this._schemaConfig.introspectionJSON = JSON.parse(
+          result.introspectionJSONString,
+        );
+        this._schemaConfig.introspectionJSONString =
+          result.introspectionJSONString;
+      }
     }
-    return this.loadSchemaResponse();
+
+    return this._schemaConfig.schema ?? null;
   }
 
-  public async loadSchemaResponse(): Promise<SchemaResponse | null> {
-    if (this._schemaString) {
-      return typeof this._schemaString === 'string'
-        ? this.parse(this._schemaString)
-        : this._schemaString;
-    }
-    if (!this._schemaConfig?.uri) {
-      return null;
-    }
-    this._schemaResponse = (await this._schemaLoader(
-      this._schemaConfig,
-    )) as SchemaResponse;
-    return this._schemaResponse;
-  }
-
-  public async loadSchema() {
-    const schemaResponse = await this.loadSchemaResponse();
-    if (schemaResponse) {
-      this._schema = this._schemaBuilder(schemaResponse) as GraphQLSchema;
-      return this._schema;
-    } else {
-      return null;
-    }
-  }
-
-  public async parse(text: string, options?: ParseOptions) {
+  public parse(text: string, options?: ParseOptions) {
     return this._parser(text, options || this._parseOptions);
   }
 
@@ -182,7 +171,8 @@ export class LanguageService {
       await this.getExternalFragmentDefinitions(),
     );
   };
-
+  // todo: use uri arguments in the metheods below to read from a document cache? however json lang service's
+  // document cache is actually instantiated in monaco-json using ctx._getMirrorModels()
   public getDiagnostics = async (
     _uri: string,
     documentText: string,
@@ -205,4 +195,21 @@ export class LanguageService {
       documentText,
       position,
     );
+
+  public getVariablesJSONSchema = async (
+    _uri: string,
+    documentText: string,
+  ) => {
+    const schema = await this.getSchema();
+    if (schema && documentText.length > 3) {
+      try {
+        const documentAST = await this.parse(documentText);
+        const operationFacts = getOperationASTFacts(documentAST, schema);
+        if (operationFacts && operationFacts.variableToType) {
+          return getVariablesJSONSchema(operationFacts.variableToType);
+        }
+      } catch (err) {}
+    }
+    return null;
+  };
 }
